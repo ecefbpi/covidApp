@@ -6,6 +6,7 @@ import datetime
 import requests
 import json
 import sys
+import clock
 
 # === GLOBAL VARIABLES ===
 
@@ -206,10 +207,11 @@ def read_csv_to_df_in_disk():
 
 if __name__ == "__main__":
     result, TMPDIR, DATADIR = check_path()
+    start = clock.now()
     if result:
         download_csv()
         read_csv_to_df_in_disk()
-        print("Executed")
+        print("Executed in " + str(clock.now() - start) + " seconds")
     else:
         timestamp_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         with open('download_error_' + timestamp_str + '.txt', 'w') as f_error_out:
