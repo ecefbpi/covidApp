@@ -5,7 +5,7 @@
 * [General info](#general-info)
 * [Screenshots](#screenshots)
 * [Technologies](#technologies)
-* [Deployed version](#Deployed version)
+* [Deployed version](#deployed version)
 * [Features](#features)
 * [Status](#status)
 * [Inspiration](#inspiration)
