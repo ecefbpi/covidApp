@@ -75,8 +75,8 @@ def download_csv():
     r2 = requests.get(url2)
     r3 = requests.get(url3)
 
-    fecha = r3.text.split('.ods')[0].split('Informe_Comunicacion_')[1]
-    vacunas_file_name = 'Informe_Comunicacion_' + fecha + '.ods'
+    fecha = r3.text.split('.ods')[1].split('Informe_GIV_Comunicacion_')[1]
+    vacunas_file_name = 'Informe_GIV_Comunicacion_' + fecha + '.ods'
     url4 = 'https://www.mscbs.gob.es/profesionales/saludPublica/ccayes/alertasActual/nCov/documentos/' + vacunas_file_name
     r4 = requests.get(url4)
 
@@ -97,6 +97,7 @@ def convert_to_int(str_total):
 
 def read_ods_vacunas():
     vacunas_file = False
+    vacunas_file_name = None
 
     for file in os.listdir(DATADIR):
         if '.' in file:
@@ -104,15 +105,11 @@ def read_ods_vacunas():
             file_extension = file.split('.')[1]
             if file_extension == 'ods':
                 if 'Informe_Comunicacion' in file_name:
-                    os.rename(DATADIR + file, DATADIR + 'vacunas.ods')
-
-
-    for file in os.listdir(DATADIR):
-        if file == 'vacunas.ods':
-            vacunas_file = True
+                    vacunas_file_name = file
+                    vacunas_file = True
 
     if vacunas_file:
-        doc = ezodf.opendoc(DATADIR + 'vacunas.ods')
+        doc = ezodf.opendoc(DATADIR + vacunas_file_name)
         sheet = doc.sheets[0]
         data = dict()
         for i, row in enumerate(sheet.rows()):
