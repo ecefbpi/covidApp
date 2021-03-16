@@ -75,8 +75,7 @@ def download_csv():
     r2 = requests.get(url2)
     r3 = requests.get(url3)
 
-    fecha = r3.text.split('.ods')[1].split('Informe_GIV_Comunicacion_')[1]
-    vacunas_file_name = 'Informe_GIV_Comunicacion_' + fecha + '.ods'
+    vacunas_file_name = r3.text.split('.ods')[0].split('/')[-1] + '.ods'
     url4 = 'https://www.mscbs.gob.es/profesionales/saludPublica/ccayes/alertasActual/nCov/documentos/' + vacunas_file_name
     r4 = requests.get(url4)
 
@@ -104,9 +103,8 @@ def read_ods_vacunas():
             file_name = file.split('.')[0]
             file_extension = file.split('.')[1]
             if file_extension == 'ods':
-                if 'Informe_Comunicacion' in file_name:
-                    vacunas_file_name = file
-                    vacunas_file = True
+                vacunas_file_name = file
+                vacunas_file = True
 
     if vacunas_file:
         doc = ezodf.opendoc(DATADIR + vacunas_file_name)
