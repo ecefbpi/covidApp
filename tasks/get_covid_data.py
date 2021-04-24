@@ -126,10 +126,10 @@ def read_ods_vacunas():
                     data[i].append(cell_value)
 
         df = pd.DataFrame.from_dict(data, orient='index')
-        df_tmp = df[[0, 1, 2, 3, 4, 5, 6, 7]].copy()
+        df_tmp = df[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]].copy()
         df_tmp.rename(columns={0: 'ccaa', 1: 'entregado_Pfizer', 2: 'entregado_Moderna', 3: 'entregado_AstraZeneca',
-                               4: 'entregado_total', 5: 'administrado',6: 'porct_sobre_entregado',
-                               7: 'personas_vacunadas_dos_dosis'},
+                               4: 'entregado_Janssen', 5:'entregado_total', 6: 'administrado',7: 'porct_sobre_entregado',
+                               8: 'personas_vacunadas_una_dosis', 9:'personas_vacunadas_dos_dosis'},
                       inplace=True)
         df_vacunas = df_tmp.dropna(how='any', axis=0)
 

@@ -27,6 +27,8 @@ CCAA_PROV_DICT = {'AN': ['AL', 'CA', 'CO', 'GR', 'H', 'J', 'MA', 'SE'],'AR': ['H
                           'EX': ['BA', 'CC'],'GA': ['C', 'LU', 'OR','PO'],'IB': ['PM'],'RI': ['LO'],'MD': ['M'],
                           'MC': ['MU'],'NC': ['NA'],'PV': ['BI', 'SS', 'VI'],'VC': ['V'],'CE': ['CE'],'ML': ['ME']}
 FONT_DICT = dict(family="Courier New, monospace", size=12, color="darkslategrey")
+FONT_DICT_small = dict(family="Courier New, monospace", size=10, color="darkslategrey")
+
 # Define TMPDIR and DATADIR
 pwd = os.getcwd()
 files = os.listdir('.')
@@ -113,8 +115,8 @@ def covid_plot(filtro_ccaa, avg7days):
             xanchor="right",
             x=0.6
         ),
-        width=1200,
-        height=900,
+        width=1000,
+        height=750,
     )
     figtotal.update_yaxes(title_text="Number of tested-positive", secondary_y=False)
     figtotal.update_yaxes(title_text="Number of deceases", secondary_y=True)
@@ -204,7 +206,7 @@ def covid_compare_plot(ccaa_comp1, ccaa_comp2, avg_on):
                                         name='<b>deceases</b>'), secondary_y=True)
 
     figtotal_1.update_layout(
-        font=FONT_DICT,
+        font=FONT_DICT_small,
         title={
             'text': "Tested-positive vs deceases by COVID-19 - " + comunidad_1,
             'y': 0.9,
@@ -214,18 +216,18 @@ def covid_compare_plot(ccaa_comp1, ccaa_comp2, avg_on):
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=-0.2,
+            y=-0.4,
             xanchor="right",
-            x=0.9
+            x=0.5
         ),
-        width=700,
-        height=600,
+        width=550,
+        height=425,
     )
     figtotal_1.update_yaxes(title_text="Number of tested-positive", secondary_y=False)
     figtotal_1.update_yaxes(title_text="Number of deceases", secondary_y=True)
 
     figtotal_2.update_layout(
-        font=FONT_DICT,
+        font=FONT_DICT_small,
         title={
             'text': "Tested-positive vs deceases by COVID-19 - " + comunidad_2,
             'y': 0.9,
@@ -235,12 +237,12 @@ def covid_compare_plot(ccaa_comp1, ccaa_comp2, avg_on):
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=-0.2,
+            y=-0.4,
             xanchor="right",
-            x=0.9
+            x=0.5
         ),
-        width=700,
-        height=600,
+        width=550,
+        height=425,
     )
     figtotal_2.update_yaxes(title_text="Number of tested-positive", secondary_y=False)
     figtotal_2.update_yaxes(title_text="Number of deceases", secondary_y=True)
@@ -259,8 +261,9 @@ def plot_vacc():
     pfizer = df_vacunas['entregado_Pfizer'].sum()
     moderna = df_vacunas['entregado_Moderna'].sum()
     astra = df_vacunas['entregado_AstraZeneca'].sum()
-    labels1 = ['Pfizer', 'Moderna', 'AstraZeneca']
-    values1 = [pfizer, moderna, astra]
+    janssen = df_vacunas['entregado_Janssen'].sum()
+    labels1 = ['Pfizer', 'Moderna', 'AstraZeneca', 'Janssen']
+    values1 = [pfizer, moderna, astra, janssen]
 
     # fig2 data
     total = df_vacunas['entregado_total'].sum()
@@ -286,28 +289,27 @@ def plot_vacc():
     no_vacunados_ccaa = df_vacunas['porc_no_vacunado'].tolist()
     labels4 = df_vacunas['ccaa'].apply(lambda x: CCAA_DICT[x]).tolist()
 
-    font_dict = dict(family="Courier New, monospace", size=12, color="darkslategrey")
-
     # fig1
     fig1 = go.Figure(
         data=[go.Pie(labels=labels1, values=values1, textinfo='label+percent', insidetextorientation='radial', )])
     fig1.update_layout(
-        font=font_dict,
+        font=FONT_DICT_small,
         title={
             'text': "Vaccinations by vendor - España",
             'y': 0.9,
             'x': 0.45,
             'xanchor': 'center',
             'yanchor': 'top'},
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=-0.2,
-            xanchor="center",
-            x=0.5
-        ),
-        width=500,
-        height=400,
+        # legend=dict(
+        #     orientation="v",
+        #     yanchor="bottom",
+        #     y=-1.02,
+        #     xanchor="right",
+        #     x=1
+        # ),
+        showlegend=False,
+        width=350,
+        height=350,
     )
     fig1.update_traces(marker=dict(colors=colors_plot, line=dict(color='#000000', width=2)))
 
@@ -315,22 +317,23 @@ def plot_vacc():
     fig2 = go.Figure(
         data=[go.Pie(labels=labels2, values=values2, textinfo='label+percent', insidetextorientation='radial', )])
     fig2.update_layout(
-        font=font_dict,
+        font=FONT_DICT_small,
         title={
             'text': "Admins vacc - España",
             'y': 0.9,
             'x': 0.45,
             'xanchor': 'center',
             'yanchor': 'top'},
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=-0.2,
-            xanchor="center",
-            x=0.4,
-        ),
-        width=500,
-        height=400,
+        # legend=dict(
+        #     orientation="h",
+        #     yanchor="bottom",
+        #     y=-1.2,
+        #     xanchor="center",
+        #     x=0.5,
+        # ),
+        showlegend=False,
+        width=350,
+        height=350,
     )
     fig2.update_traces(marker=dict(colors=colors_plot, line=dict(color='#000000', width=2)))
 
@@ -338,22 +341,23 @@ def plot_vacc():
     fig3 = go.Figure(
         data=[go.Pie(labels=labels3, values=values3, textinfo='label+percent', insidetextorientation='radial', )])
     fig3.update_layout(
-        font=font_dict,
+        font=FONT_DICT_small,
         title={
             'text': "Vaccinated population - España",
             'y': 0.9,
             'x': 0.45,
             'xanchor': 'center',
             'yanchor': 'top'},
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=-0.2,
-            xanchor="center",
-            x=0.5
-        ),
-        width=500,
-        height=400,
+        # legend=dict(
+        #     orientation="h",
+        #     yanchor="bottom",
+        #     y=-0.2,
+        #     xanchor="center",
+        #     x=0.5
+        # ),
+        showlegend=False,
+        width=350,
+        height=350,
     )
     fig3.update_traces(marker=dict(colors=colors_plot, line=dict(color='#000000', width=2)))
 
@@ -384,15 +388,15 @@ def plot_vacc():
 
     fig4.update_layout(
         barmode='stack',
-        font=font_dict,
+        font=FONT_DICT,
         title={
             'text': "Vaccinated population per 'Comunidad Autónoma'",
-            'y': 0.9,
-            'x': 0.4,
+            'y': 0.95,
+            'x': 0.5,
             'xanchor': 'center',
             'yanchor': 'top'},
-        width=1200,
-        height=700,
+        width=1100,
+        height=850,
     )
 
     return fig1, fig2, fig3, fig4
@@ -615,8 +619,8 @@ def plot_deceases(avg7days):
             x=1.1
         ),
         legend_title_text='Age Group',
-        width=1200,
-        height=900,
+        width=1000,
+        height=750,
     )
     def_plot.update_yaxes(title_text=x_text)
 
