@@ -1,7 +1,6 @@
 import dash
 import os
 import time
-import ezodf
 import pandas as pd
 import datetime
 import dash_bootstrap_components as dbc
@@ -10,7 +9,7 @@ from dash.dependencies import Input, Output, State
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import plotly.express as px
-import requests
+import numpy as np
 import json
 
 # === GLOBAL VARIABLES ===
@@ -26,6 +25,14 @@ CCAA_PROV_DICT = {'AN': ['AL', 'CA', 'CO', 'GR', 'H', 'J', 'MA', 'SE'],'AR': ['H
                           'CL': ['AV', 'BU', 'LE', 'P', 'SA', 'SG', 'SO', 'VA', 'ZA'],'CT':['B', 'GI', 'L', 'T'],
                           'EX': ['BA', 'CC'],'GA': ['C', 'LU', 'OR','PO'],'IB': ['PM'],'RI': ['LO'],'MD': ['M'],
                           'MC': ['MU'],'NC': ['NA'],'PV': ['BI', 'SS', 'VI'],'VC': ['V'],'CE': ['CE'],'ML': ['ME']}
+CCAA_DICT_SHORT = {'AN': 'Andalucía', 'AR': 'Aragón', 'AS': 'Asturias', 'CN': 'Canarias',
+              'CB': 'Cantabria',
+              'CM': 'Castilla-La Mancha', 'CL': 'Castilla y León', 'CT': 'Cataluña', 'EX': 'Extremadura',
+              'GA': 'Galicia', 'IB': 'Baleares', 'RI': 'La Rioja', 'MD': 'Madrid',
+              'MC': 'Murcia', 'NC': 'Navarra', 'PV': 'País Vasco',
+              'VC': 'Valencia', 'CE': 'Ceuta',
+              'ML': 'Melilla'}
+vect_ccaa = np.vectorize(lambda x: CCAA_DICT_SHORT.get(x, 'España'))
 FONT_DICT = dict(family="Courier New, monospace", size=12, color="darkslategrey")
 FONT_DICT_small = dict(family="Courier New, monospace", size=10, color="darkslategrey")
 
@@ -404,15 +411,134 @@ def plot_vacc():
 def plot_hosp():
     colors_plot = px.colors.qualitative.Plotly
 
+    #df_pob
+    with open(TMPDIR + 'df_pob.txt') as df_pob_file:
+        df_pob_dictionazied = json.load(df_pob_file)
+    df_pob = pd.DataFrame.from_dict(df_pob_dictionazied)
+
     #df_hosp
     with open(TMPDIR + 'df_hosp.txt') as df_hosp_file:
         df_hosp_dictionazied = json.load(df_hosp_file)
     df_hosp = pd.DataFrame.from_dict(df_hosp_dictionazied)
     df_hosp['fecha'] = pd.to_datetime(df_hosp['fecha'], format='%Y-%m-%d')
+    df_hosp = df_hosp.drop(['provincia_iso'], axis=1)
 
-    df_sin_nc = df_hosp[df_hosp.ne('NC').all(axis=1)]
-    df_sin_nc_h = df_sin_nc[df_sin_nc['sexo'] == 'H']
-    df_sin_nc_m = df_sin_nc[df_sin_nc['sexo'] == 'M']
+    # time-line graph: fig_hosp_plot_4
+    df_to_plot1 = df_hosp.groupby('fecha').sum()
+    df_to_plot2 = df_to_plot1.drop(['num_casos', 'num_def'], axis=1)
+    df_to_plot2.reset_index(inplace=True)
+
+    df_to_plot3 = pd.DataFrame(df_to_plot2['fecha'])
+    for i, col in enumerate(df_to_plot2.columns):
+        if col != 'fecha':
+            new_col = col + '_14days'
+            df_to_plot3[new_col] = df_to_plot2.iloc[:, i].rolling(window=14).sum()
+
+    df_to_plot4 = df_to_plot3.dropna(how='any', axis=0)
+
+    fig_hosp_plot_4 = go.Figure()
+    for col in df_to_plot4.columns:
+        if col != 'fecha':
+            fig_hosp_plot_4.add_trace(go.Scatter(x=df_to_plot4['fecha'], y=df_to_plot4[col], mode='lines',
+                                              name=col))
+
+    fig_hosp_plot_4.update_layout(
+        font = FONT_DICT,
+        title={
+            'text': "Hospitalization (14 days sum) vs Date",
+            'y':0.95,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'},
+        xaxis=dict(
+            title='Time',
+            titlefont=dict(
+                family='Courier New, monospace',
+                size=12,
+                color='darkslategrey'
+            ),
+        ),
+        yaxis=dict(
+            title='Sum of patients per 14-days window',
+            titlefont=dict(
+                family='Courier New, monospace',
+                size=12,
+                color='darkslategrey'
+            ),
+        ),
+        legend=dict(
+            orientation="v",
+            yanchor="top",
+            y=0.95,
+            xanchor="right",
+            x=0.95
+        ),
+        width=1050,
+        height=700,
+    )
+
+    # Scatter plot: fig_hosp_plot_1
+    df_scatter1 = df_hosp.groupby('ccaa').sum().drop(['num_casos', 'num_def'], axis=1)
+    df_scatter1.reset_index(level=0, inplace=True)
+    df_scatter2 = pd.merge(df_scatter1, df_pob, how='left')
+    df_esp = pd.DataFrame({'ccaa': ['España'], 'num_hosp': [df_scatter2['num_hosp'].sum()],
+                           'num_uci': [df_scatter2['num_uci'].sum()], 'poblacion': [df_pob['poblacion'].sum()]})
+    df_scatter3 = df_scatter2.append(df_esp, ignore_index=True)
+    df_scatter3['ccaa_comp'] = vect_ccaa(df_scatter3.ccaa)
+
+    for i, col in enumerate(df_scatter3.columns):
+        if col == 'num_hosp' or col == 'num_uci':
+            new_col = col + '_1k'
+            df_scatter3[new_col] = (1000 * df_scatter3[col]) / df_scatter3['poblacion']
+
+    fig_hosp_plot_1 = go.Figure(
+        data=go.Scatter(
+            x=df_scatter3['num_hosp_1k'],
+            y=df_scatter3['num_uci_1k'],
+            mode='markers+text',
+            marker=dict(
+                size=8,
+                color=(
+                    (df_scatter3.ccaa == 'España')
+                ).astype('int'),
+                colorscale=[[0, colors_plot[0]], [1, colors_plot[1]]]
+            ),
+            text=df_scatter3['ccaa_comp'],
+            textposition="bottom center"
+        )
+    )
+
+    fig_hosp_plot_1.update_layout(
+        font=FONT_DICT,
+        title={
+            'text': 'UCI patients vs Hospitalized per 1k hab',
+            'y': 0.9,
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'},
+        yaxis=dict(
+            title='UCI per 1k hab.',
+            titlefont=dict(
+                family='Courier New, monospace',
+                size=12,
+                color='darkslategrey'
+            ),
+        ),
+        xaxis=dict(
+            title='Hosp. per 1k hab.',
+            titlefont=dict(
+                family='Courier New, monospace',
+                size=12,
+                color='darkslategrey'
+            ),
+        ),
+        width=500,
+        height=600,
+    )
+
+    # Bar Plots
+    df_sin_nc_h = df_hosp[df_hosp['sexo'] == 'H']
+    df_sin_nc_m = df_hosp[df_hosp['sexo'] == 'M']
     df_sin_nc_h_edad = df_sin_nc_h.groupby('grupo_edad').sum()
     df_sin_nc_m_edad = df_sin_nc_m.groupby('grupo_edad').sum()
 
@@ -421,28 +547,26 @@ def plot_hosp():
 
     grupo_edad = df_sin_nc_m_edad['grupo_edad'].tolist()
 
-    defun_h = df_sin_nc_h_edad['num_def'].tolist()
-    defun_m = df_sin_nc_m_edad['num_def'].tolist()
-
     hosp_h = df_sin_nc_h_edad['num_hosp'].tolist()
     hosp_m = df_sin_nc_m_edad['num_hosp'].tolist()
 
     uci_h = df_sin_nc_h_edad['num_uci'].tolist()
     uci_m = df_sin_nc_m_edad['num_uci'].tolist()
 
-    fig_hosp = go.Figure()
-    fig_hosp.add_trace(go.Bar(x=grupo_edad,
+    # Bar Plot 1: fig_hosp_plot_2
+    fig_hosp_plot_2 = go.Figure()
+    fig_hosp_plot_2.add_trace(go.Bar(x=grupo_edad,
                               y=hosp_h,
                               name='Male',
                               marker_color=colors_plot[0]
                               ))
-    fig_hosp.add_trace(go.Bar(x=grupo_edad,
+    fig_hosp_plot_2.add_trace(go.Bar(x=grupo_edad,
                               y=hosp_m,
                               name='Female',
                               marker_color=colors_plot[1]
                               ))
 
-    fig_hosp.update_layout(
+    fig_hosp_plot_2.update_layout(
         font=FONT_DICT,
         title={
             'text': "Hospitalized by gender and age group",
@@ -450,11 +574,19 @@ def plot_hosp():
             'x': 0.45,
             'xanchor': 'center',
             'yanchor': 'top'},
-        xaxis_tickfont_size=14,
+        xaxis_tickfont_size=10,
+        xaxis=dict(
+            title='Age group',
+            titlefont=dict(
+                family='Courier New, monospace',
+                size=12,
+                color='darkslategrey'
+            ),
+        ),
         yaxis=dict(
             title='Hospitalized patients',
-            titlefont_size=16,
-            tickfont_size=14,
+            titlefont_size=12,
+            tickfont_size=10,
         ),
         legend=dict(
             x=0,
@@ -465,23 +597,24 @@ def plot_hosp():
         barmode='group',
         bargap=0.15,  # gap between bars of adjacent location coordinates.
         bargroupgap=0.1, # gap between bars of the same location coordinate.
-        width=1000,
-        height=500,
+        width=500,
+        height=275,
     )
 
-    fig_uci = go.Figure()
-    fig_uci.add_trace(go.Bar(x=grupo_edad,
+    # Bar Plot 2: fig_hosp_plot_3
+    fig_hosp_plot_3 = go.Figure()
+    fig_hosp_plot_3.add_trace(go.Bar(x=grupo_edad,
                              y=uci_h,
                              name='Male',
                              marker_color=colors_plot[0]
                              ))
-    fig_uci.add_trace(go.Bar(x=grupo_edad,
+    fig_hosp_plot_3.add_trace(go.Bar(x=grupo_edad,
                              y=uci_m,
                              name='Female',
                              marker_color=colors_plot[1]
                              ))
 
-    fig_uci.update_layout(
+    fig_hosp_plot_3.update_layout(
         font=FONT_DICT,
         title={
             'text': "UCI occupancy by gender and age group",
@@ -489,11 +622,19 @@ def plot_hosp():
             'x': 0.45,
             'xanchor': 'center',
             'yanchor': 'top'},
-        xaxis_tickfont_size=14,
+        xaxis_tickfont_size=10,
+        xaxis=dict(
+            title='Age group',
+            titlefont=dict(
+                family='Courier New, monospace',
+                size=12,
+                color='darkslategrey'
+            ),
+        ),
         yaxis=dict(
             title='UCI occupancy',
-            titlefont_size=16,
-            tickfont_size=14,
+            titlefont_size=12,
+            tickfont_size=10,
         ),
         legend=dict(
             x=0,
@@ -504,50 +645,11 @@ def plot_hosp():
         barmode='group',
         bargap=0.15,  # gap between bars of adjacent location coordinates.
         bargroupgap=0.1,  # gap between bars of the same location coordinate.
-        width = 1000,
-        height = 500,
+        width = 500,
+        height = 275,
     )
 
-    fig_def = go.Figure()
-    fig_def.add_trace(go.Bar(x=grupo_edad,
-                             y=defun_h,
-                             name='Male',
-                             marker_color=colors_plot[0]
-                             ))
-    fig_def.add_trace(go.Bar(x=grupo_edad,
-                             y=defun_m,
-                             name='Female',
-                             marker_color=colors_plot[1]
-                             ))
-
-    fig_def.update_layout(
-        font=FONT_DICT,
-        title={
-            'text': "Deceases by gender and age group",
-            'y': 0.9,
-            'x': 0.45,
-            'xanchor': 'center',
-            'yanchor': 'top'},
-        xaxis_tickfont_size=14,
-        yaxis=dict(
-            title='Number of deceases',
-            titlefont_size=16,
-            tickfont_size=14,
-        ),
-        legend=dict(
-            x=0,
-            y=1.0,
-            bgcolor='rgba(255, 255, 255, 0)',
-            bordercolor='rgba(255, 255, 255, 0)'
-        ),
-        barmode='group',
-        bargap=0.15,  # gap between bars of adjacent location coordinates.
-        bargroupgap=0.1,  # gap between bars of the same location coordinate.
-        width=1000,
-        height=500,
-    )
-
-    return fig_hosp, fig_uci, fig_def
+    return fig_hosp_plot_1, fig_hosp_plot_2, fig_hosp_plot_3, fig_hosp_plot_4
 
 def plot_deceases(avg7days):
 
@@ -838,30 +940,33 @@ def show_visualizations_vacunas(figure1, figure2, figure3, figure4):
 # Callback for hospitalization graphs
 @app.callback([Output('hosp-plot_1', 'figure'),
                Output('hosp-plot_2', 'figure'),
-               Output('hosp-plot_3', 'figure')],
+               Output('hosp-plot_3', 'figure'),
+               Output('hosp-plot_4', 'figure')],
               [Input('init', 'children')],
                prevent_initial_call=True)
 def update_plot_hosp(init_tag):
     if init_tag == 'initialized':
-        fig1, fig2, fig3 = plot_hosp()
-        return fig1, fig2, fig3
+        fig1, fig2, fig3, fig4 = plot_hosp()
+        return fig1, fig2, fig3, fig4
     else:
-        return {}, {}, {}
+        return {}, {}, {}, {}
 
 
 @app.callback([Output('hosp-plot_1', 'style'),
                Output('hosp-plot_2', 'style'),
-               Output('hosp-plot_3', 'style')],
+               Output('hosp-plot_3', 'style'),
+               Output('hosp-plot_4', 'style')],
               [Input('hosp-plot_1', 'figure'),
                Input('hosp-plot_2', 'figure'),
-               Input('hosp-plot_3', 'figure')],
+               Input('hosp-plot_3', 'figure'),
+               Input('hosp-plot_4', 'figure')],
                prevent_initial_call=True)
-def show_visualizations_hosp(figure1, figure2, figure3):
-    if figure1 is not None and figure2 is not None and figure3 is not None:
-        if len(figure1) != 0 and len(figure2) != 0 and len(figure3) != 0:
-            return dict(), dict(), dict()
+def show_visualizations_hosp(figure1, figure2, figure3, figure4):
+    if figure1 is not None and figure2 is not None and figure3 is not None and figure4 is not None:
+        if len(figure1) != 0 and len(figure2) != 0 and len(figure3) != 0 and len(figure4) !=0:
+            return dict(), dict(), dict(), dict()
 
-    return dict(visibility = 'hidden'), dict(visibility = 'hidden'), dict(visibility = 'hidden')
+    return dict(visibility = 'hidden'), dict(visibility = 'hidden'), dict(visibility = 'hidden'),  dict(visibility = 'hidden')
 
 # Callback for deceases graphs
 @app.callback(Output('deceases-plot', 'figure'),

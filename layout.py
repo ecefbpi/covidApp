@@ -349,8 +349,33 @@ HOSPITALIZATION_GRAPH_TAB = dbc.Tab(
                                   config=dict(responsive=True),
                                   )
                     ],
-                    width={"size": 10, "offset": 1}
-                )
+                    width={"size": 5},
+                    md=4
+                ),
+                dbc.Col(
+                    [
+                        dbc.Row(
+                            [
+                                dcc.Graph(id='hosp-plot_2',
+                                          style=dict(visibility='hidden'),
+                                          config=dict(responsive=True),
+                                          )
+                            ],
+                        ),
+                        dbc.Row([html.Br(),html.Br()]),
+                        dbc.Row(
+                            [
+                                dcc.Graph(id='hosp-plot_3',
+                                          style=dict(visibility='hidden'),
+                                          config=dict(responsive=True),
+                                          )
+                            ],
+                        ),
+
+                    ],
+                    width={"size": 6, "offset": 1},
+                    md=4,
+                ),
             ],
             className="p-4"
         ),
@@ -358,30 +383,16 @@ HOSPITALIZATION_GRAPH_TAB = dbc.Tab(
             [
                 dbc.Col(
                     [
-                        dcc.Graph(id='hosp-plot_2',
+                        dcc.Graph(id='hosp-plot_4',
                                   style=dict(visibility='hidden'),
                                   config=dict(responsive=True),
                                   )
                     ],
-                    width={"size": 10, "offset": 1}
+                    width={"size": 12, "offset": 0}
                 )
             ],
             className="p-4"
         ),
-        dbc.Row(
-            [
-                dbc.Col(
-                    [
-                        dcc.Graph(id='hosp-plot_3',
-                                  style=dict(visibility='hidden'),
-                                  config=dict(responsive=True),
-                                  )
-                    ],
-                    width={"size": 10, "offset": 1}
-                )
-            ],
-            className="p-4"
-        )
     ],
     label="Hospitalization Graphs",
     tab_id="hosp-graph-tab"

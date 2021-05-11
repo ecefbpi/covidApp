@@ -6,6 +6,7 @@ import datetime
 import requests
 import json
 import sys
+import numpy as np
 import clock
 
 # === GLOBAL VARIABLES ===
@@ -27,6 +28,23 @@ CCAA_TO_STANDARD = {'Andalucía': 'AN', 'Aragón': 'AR', 'Asturias': 'AS', 'Bale
                     'Cantabria': 'CB', 'Castilla y Leon': 'CL', 'Castilla La Mancha': 'CM', 'Cataluña': 'CT',
                     'C. Valenciana': 'VC', 'Extremadura': 'EX', 'Galicia': 'GA', 'La Rioja': 'RI', 'Madrid': 'MD',
                     'Murcia': 'MC', 'Navarra': 'NC', 'País Vasco': 'PV', 'Ceuta': 'CE', 'Melilla': 'ML', }
+
+CCAA_DICT_SHORT = {'AN': 'Andalucía', 'AR': 'Aragón', 'AS': 'Asturias', 'CN': 'Canarias',
+              'CB': 'Cantabria',
+              'CM': 'Castilla-La Mancha', 'CL': 'Castilla y León', 'CT': 'Cataluña', 'EX': 'Extremadura',
+              'GA': 'Galicia', 'IB': 'Baleares', 'RI': 'La Rioja', 'MD': 'Madrid',
+              'MC': 'Murcia', 'NC': 'Navarra', 'PV': 'País Vasco',
+              'VC': 'Valencia', 'CE': 'Ceuta',
+              'ML': 'Melilla'}
+
+PROV_TO_CCAA_DICT = {'C':'GA','VI':'PV','AB':'CM','A':'VC','AL':'AN','O':'AS','AV':'CL','BA':'EX','PM':'IB','B':'CT',
+                     'BI':'PV','BU':'CL','CC':'EX','CA':'AN','S':'CB','CS':'VC','CR':'CM','CO':'AN','CU':'CM','SS':'PV',
+                     'GI':'CT','GR':'AN','GU':'CM','H':'AN','HU':'AR','J':'AN','LO':'RI','GC':'CN','LE':'CL','L':'CT',
+                     'LU':'GA','M':'MD','MA':'AN','MU':'MC','NA':'NC','OR':'GA','P':'CL','PO':'GA','SA':'CL','TF':'CN',
+                     'SG':'CL','SE':'AN','SO':'CL','T':'CT','TE':'AR','TO':'CM','V':'VC','VA':'CL','ZA':'CL','Z':'AR',
+                     'CE':'CE', 'ML':'ML'}
+
+vect = np.vectorize(lambda x: PROV_TO_CCAA_DICT[x])
 
 def check_path():
     TMPDIR = None
@@ -141,6 +159,16 @@ def read_ods_vacunas():
     else:
         return None
 
+def read_hosp():
+    df_pob = pd.read_csv(DATADIR + "poblacion_ccaa_2020.csv", sep=';', converters={'total': convert_to_int})
+    df_pob.rename(columns={'total': 'poblacion'}, inplace=True)
+
+    df_hosp = pd.read_csv(DATADIR + "casos_hosp_uci_def_sexo_edad_provres.csv", dtype={'ccaa_iso': 'category'})
+
+    df_hosp1 = df_hosp[df_hosp.ne('NC').all(axis=1)].dropna()
+    df_hosp1['ccaa'] = vect(df_hosp1.provincia_iso)
+
+    return df_hosp1, df_pob
 
 def read_csv_to_df_in_disk():
 
@@ -162,10 +190,10 @@ def read_csv_to_df_in_disk():
     df.rename(columns={'ccaa_iso': 'ccaa'}, inplace=True)
 
     #df_hosp
-    df_hosp = pd.read_csv(DATADIR + "casos_hosp_uci_def_sexo_edad_provres.csv", dtype={'ccaa_iso': 'category'})
+    df_hosp_plot, df_pob = read_hosp()
 
     #df_muertes
-    df_muertes = df_hosp[['fecha', 'provincia_iso', 'num_def']].copy()
+    df_muertes = df_hosp_plot[['fecha', 'provincia_iso', 'num_def']].copy()
     df_muertes.rename(columns={'provincia_iso': 'prov', 'num_def': 'muertes'}, inplace=True)
 
     #df_vacunas
@@ -187,13 +215,16 @@ def read_csv_to_df_in_disk():
         json.dump(df_muertes.to_dict(), df_muertes_out)
 
     with open(TMPDIR + 'df_hosp.txt', 'w') as df_hosp_out:
-        json.dump(df_hosp.to_dict(), df_hosp_out)
+        json.dump(df_hosp_plot.to_dict(), df_hosp_out)
 
     with open(TMPDIR + 'df_vacunas.txt', 'w') as df_vacc_out:
         json.dump(df_vacunas.to_dict(), df_vacc_out)
 
     with open(TMPDIR + 'ccaa_options.txt', 'w') as ccaa_options_out:
         json.dump(dictionary_options, ccaa_options_out)
+
+    with open(TMPDIR + 'df_pob.txt', 'w') as df_pob_out:
+        json.dump(df_pob.to_dict(), df_pob_out)
 
     now = datetime.datetime.now()
     now_str = now.strftime('%Y-%m-%d %H:%M:%S')
