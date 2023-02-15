@@ -264,6 +264,11 @@ def plot_vacc():
         df_vacunas_dictionazied = json.load(df_vacunas_file)
     df_vacunas = pd.DataFrame.from_dict(df_vacunas_dictionazied)
 
+    #df_vacunas_detailed
+    with open(TMPDIR + 'df_vacunas_detailed.txt') as df_vacunas_detailed_file:
+        df_vacunas_detailed_dictionazied = json.load(df_vacunas_detailed_file)
+    df_vacunas_detailed = pd.DataFrame.from_dict(df_vacunas_detailed_dictionazied)
+
     # fig1 data
     pfizer = df_vacunas['entregado_Pfizer'].sum()
     moderna = df_vacunas['entregado_Moderna'].sum()
@@ -288,13 +293,24 @@ def plot_vacc():
     values3 = [no_vacunados, vacunados]
 
     # fig4 data
-    df_vacunas['porc_vacunado'] = round((df_vacunas['personas_vacunadas_dos_dosis'] / df_vacunas['poblacion']) * 100, 1)
-    df_vacunas['porc_no_vacunado'] = round(100 - df_vacunas['porc_vacunado'], 1)
+    df_fig4_tmp = df_vacunas[['ccaa', 'personas_vacunadas_dos_dosis', 'poblacion']]
 
-    df_vacunas.sort_values(by=['porc_vacunado'], inplace=True)
-    vacunados_ccaa = df_vacunas['porc_vacunado'].tolist()
-    no_vacunados_ccaa = df_vacunas['porc_no_vacunado'].tolist()
-    labels4 = df_vacunas['ccaa'].apply(lambda x: CCAA_DICT[x]).tolist()
+    df_esp_fig4 = pd.DataFrame({'ccaa': ['<b>España</b>'],
+                           'personas_vacunadas_dos_dosis': [df_fig4_tmp['personas_vacunadas_dos_dosis'].sum()],
+                           'poblacion': [df_fig4_tmp['poblacion'].sum()]})
+    df_fig4 = df_fig4_tmp.append(df_esp_fig4, ignore_index=True)
+
+    df_fig4['porc_vacunado'] = round((df_fig4['personas_vacunadas_dos_dosis'] / df_fig4['poblacion']) * 100, 1)
+    df_fig4['porc_no_vacunado'] = round(100 - df_fig4['porc_vacunado'], 1)
+
+    df_fig4.sort_values(by=['porc_vacunado'], inplace=True)
+    vacunados_ccaa = df_fig4['porc_vacunado'].tolist()
+    no_vacunados_ccaa = df_fig4['porc_no_vacunado'].tolist()
+    labels4 = df_fig4['ccaa'].apply(lambda x: CCAA_DICT.get(x, x)).tolist()
+
+    # fig5 data
+    grupos_edad = df_vacunas_detailed.iloc[:,1:].columns.tolist()
+    valores_esp = df_vacunas_detailed[df_vacunas_detailed['ccaa'] == 'España'].values[0].tolist()[1:]
 
     # fig1
     fig1 = go.Figure(
@@ -373,7 +389,7 @@ def plot_vacc():
     fig4.add_trace(go.Bar(
         y=labels4,
         x=vacunados_ccaa,
-        name='Vaccinated pop',
+        name='Vacc.',
         orientation='h',
         marker=dict(
             color=colors_plot[0],
@@ -384,7 +400,7 @@ def plot_vacc():
     fig4.add_trace(go.Bar(
         y=labels4,
         x=no_vacunados_ccaa,
-        name='Not vaccinated pop',
+        name='Not vacc.',
         orientation='h',
         marker=dict(
             color=colors_plot[1],
@@ -402,12 +418,133 @@ def plot_vacc():
             'x': 0.5,
             'xanchor': 'center',
             'yanchor': 'top'},
-        width=1100,
-        height=850,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.1,
+            xanchor="left",
+            x=0
+        ),
+        width=600,
+        height=800,
     )
 
-    return fig1, fig2, fig3, fig4
+    # fig5
+    fig5 = go.Figure()
+    fig5.add_trace(go.Bar(x=grupos_edad,
+                          y=valores_esp,
+                          name='Vacc. España per age',
+                          marker_color=colors_plot[0],
+                          texttemplate="%{y:.1%}",
+                          textposition="auto",
+                          textfont_color='black',
+                          textangle=0,
+                          ))
 
+    fig5.update_layout(
+        font=FONT_DICT,
+        title={
+            'text': "Vaccinated per age - España",
+            # 'y': 0.9,
+            'x': 0.45,
+            'xanchor': 'center',
+            'yanchor': 'top'},
+        xaxis_tickfont_size=10,
+        xaxis=dict(
+            title='Age group',
+            # titlefont=dict(
+            #     family='Courier New, monospace',
+            #     size=10,
+            #     color='darkslategrey'
+            # ),
+        ),
+        yaxis=dict(
+            title='Vaccinated %',
+            # titlefont=dict(
+            #     family='Courier New, monospace',
+            #     size=10,
+            #     color='darkslategrey'
+            # ),
+            # titlefont_size=10,
+            # tickfont_size=10,
+        ),
+        showlegend=False,
+        width=600,
+        height=372,
+        uniformtext_minsize=10,
+        uniformtext_mode=False
+    )
+
+    return fig1, fig2, fig3, fig4, fig5
+def plot_vacc_fig6(comunidad):
+    colors_plot = px.colors.qualitative.Plotly
+    fig6 = None
+    ccaa = None
+
+    if comunidad != '<b>España</b>':
+        for key, value in CCAA_DICT.items():
+            if value == comunidad:
+                ccaa = key
+
+        if ccaa is not None:
+            # df_vacunas_detailed
+            with open(TMPDIR + 'df_vacunas_detailed.txt') as df_vacunas_detailed_file:
+                df_vacunas_detailed_dictionazied = json.load(df_vacunas_detailed_file)
+            df_vacunas_detailed = pd.DataFrame.from_dict(df_vacunas_detailed_dictionazied)
+
+            # fig6 data
+            grupos_edad = df_vacunas_detailed.iloc[:, 1:].columns.tolist()
+            valores_ccaa = df_vacunas_detailed[df_vacunas_detailed['ccaa'] == ccaa].values[0].tolist()[1:]
+            name = 'Vacc. ' + comunidad + ' per age'
+            text = 'Vaccinated per age - ' + comunidad
+
+            # fig6
+            fig6 = go.Figure()
+            fig6.add_trace(go.Bar(x=grupos_edad,
+                                  y=valores_ccaa,
+                                  name=name,
+                                  marker_color=colors_plot[0],
+                                  texttemplate="%{y:.1%}",
+                                  textposition="auto",
+                                  textfont_color='black',
+                                  textangle=0,
+                                  ))
+
+            fig6.update_layout(
+                font=FONT_DICT,
+                title={
+                    'text': text,
+                    # 'y': 0.9,
+                    'x': 0.45,
+                    'xanchor': 'center',
+                    'yanchor': 'top'},
+                xaxis_tickfont_size=10,
+                xaxis=dict(
+                    title='Age group',
+                    # titlefont=dict(
+                    #     family='Courier New, monospace',
+                    #     size=10,
+                    #     color='darkslategrey'
+                    # ),
+                ),
+                yaxis=dict(
+                    title='Vaccinated %',
+                    # titlefont=dict(
+                    #     family='Courier New, monospace',
+                    #     size=10,
+                    #     color='darkslategrey'
+                    # ),
+                    # titlefont_size=10,
+                    # tickfont_size=10,
+                ),
+                showlegend=False,
+                width=600,
+                height=373,
+                uniformtext_minsize=10,
+                uniformtext_mode=False
+            )
+
+    return fig6
 def plot_hosp():
     colors_plot = px.colors.qualitative.Plotly
 
@@ -911,31 +1048,76 @@ def show_visualizations_compare(figure1, figure2):
 @app.callback([Output('vacc-plot_1', 'figure'),
                Output('vacc-plot_2', 'figure'),
                Output('vacc-plot_3', 'figure'),
-               Output('vacc-plot_4', 'figure')],
+               Output('vacc-plot_4', 'figure'),
+               Output('vacc-plot_5', 'figure')],
               [Input('init', 'children')],
                prevent_initial_call=True)
 def update_plot_vacunas(init_tag):
     if init_tag == 'initialized':
-        fig1, fig2, fig3, fig4 = plot_vacc()
-        return fig3, fig2, fig1, fig4
+        fig1, fig2, fig3, fig4, fig5= plot_vacc()
+        return fig3, fig2, fig1, fig4, fig5
     else:
-        return {}, {}, {}, {}
+        return {}, {}, {}, {}, {}
 
 @app.callback([Output('vacc-plot_1', 'style'),
                Output('vacc-plot_2', 'style'),
                Output('vacc-plot_3', 'style'),
-               Output('vacc-plot_4', 'style')],
+               Output('vacc-plot_4', 'style'),
+               Output('vacc-plot_5', 'style')],
               [Input('vacc-plot_1', 'figure'),
                Input('vacc-plot_2', 'figure'),
                Input('vacc-plot_3', 'figure'),
-               Input('vacc-plot_4', 'figure')],
+               Input('vacc-plot_4', 'figure'),
+               Input('vacc-plot_5', 'figure')],
                prevent_initial_call=True)
-def show_visualizations_vacunas(figure1, figure2, figure3, figure4):
-    if figure1 is not None and figure2 is not None and figure3 is not None and figure4 is not None:
-        if len(figure1) != 0 and len(figure2) != 0 and len(figure3) != 0 and len(figure4) != 0:
-            return dict(), dict(), dict(), dict()
+def show_visualizations_vacunas(figure1, figure2, figure3, figure4, figure5):
+    if figure1 is not None and figure2 is not None and figure3 is not None and figure4 is not None\
+            and figure5 is not None:
+        if len(figure1) != 0 and len(figure2) != 0 and len(figure3) != 0 and len(figure4) != 0\
+                and len(figure5) != 0:
+            return dict(), dict(), dict(), dict(), dict()
 
-    return dict(visibility = 'hidden'), dict(visibility = 'hidden'), dict(visibility = 'hidden'), dict(visibility = 'hidden')
+    return dict(visibility = 'hidden'), dict(visibility = 'hidden'), dict(visibility = 'hidden'), \
+           dict(visibility = 'hidden'), dict(visibility = 'hidden')
+
+# Vaccination graph number 6
+@app.callback(
+    Output('vacc-plot_6', 'figure'),
+    [Input('vacc-plot_4', 'clickData'),
+     Input('vacc-plot_4', 'figure')],
+    ([State('vacc-plot_6', 'figure')]))
+def display_graph6_click_data(clickdata, figure4, currentfigure6):
+    if figure4 is not None:
+        if len(figure4) != 0:
+            if clickdata is None or len(clickdata) == 0:
+                # bar graph similar to graph 5 for the comunidad with highest vaccination %
+                index = figure4['data'][0]['x'].index(max(figure4['data'][0]['x']))
+                comunidad = figure4['data'][0]['y'][index]
+                figure6 = plot_vacc_fig6(comunidad)
+                if figure6 is not None:
+                    return figure6
+                else:
+                    return currentfigure6
+            else:
+                # bar graph similar to graph 5 for the comunidad that was clicked
+                comunidad = clickdata['points'][0]['y']
+                figure6 = plot_vacc_fig6(comunidad)
+                if figure6 is not None:
+                    return figure6
+                else:
+                    return currentfigure6
+
+    return {}
+
+@app.callback([Output('vacc-plot_6', 'style')],
+              [Input('vacc-plot_6', 'figure')],
+               prevent_initial_call=True)
+def show_visualizations_graph6(figure6):
+    if figure6 is not None:
+        if len(figure6) != 0:
+            return [dict()]
+
+    return [dict(visibility='hidden')]
 
 # Callback for hospitalization graphs
 @app.callback([Output('hosp-plot_1', 'figure'),

@@ -14,9 +14,11 @@ INFO_MODAL = "Main Graph represents positive-tested number of people and decesae
              "Compare Graphs represents the same information as main graph but for two different 'Comunidad Autónoma'" \
              " side-by-side.\n\n" \
              "Vaccination Graphs show different information about vaccination figures in Spain and also compares vaccination" \
-             " ratio of all the 'Comunidades Autónomas.'\n\n" \
-             "Hospitalization Graphs show different information about patients being hospitalized, in UCI and deceased by " \
-             "gender and gruped by age range.\n\n" \
+             " ratio of all the 'Comunidades Autónomas'. It also shows vaccination ratios per age range in Spain and also per" \
+             "'Comunidad Autónoma' by clicking in the corresponding comunidad in the main graph.\n\n" \
+             "Hospitalization Graphs show different information about patients being hospitalized and in UCI. There is " \
+             "an scatter plot showing the hospitalized patients vs the patients in UCI for all the different 'Comunidades Autónomas'" \
+             " and Spain per 1000 people. Also, total per age range by gender is shown as well as totals along the time.\n\n" \
              "Data Sources:\n" \
              "Centro Nacional de Epidemiología: https://cnecovid.isciii.es/covid19/\n" \
              "Ministerio de Sanidad, Consumo y Bienestar Social: https://www.mscbs.gob.es/profesionales/saludPublica/ccayes/alertasActual/nCov/vacunaCovid19.htm"
@@ -125,7 +127,7 @@ DATA_TAB = dbc.Tab(
                         'width': '100%',
                         'marginBottom': 15,
                     }
-                )
+                ),
             ],
             color=COLORS[0],
             type='dot',
@@ -328,7 +330,27 @@ VACCINATION_GRAPH_TAB = dbc.Tab(
                                   config=dict(responsive=True),
                                   )
                     ],
-                    width={"size": 10, "offset": 1}
+                    width={"size": 5, "offset": 0}
+                ),
+                dbc.Col(
+                    [
+                        dbc.Row(
+                            [
+                                dcc.Graph(id='vacc-plot_5',
+                                          style=dict(visibility='hidden'),
+                                          config=dict(responsive=True),
+                                          )
+                            ]),
+                        dbc.Row([html.Br(), html.Br()]),
+                        dbc.Row(
+                            [
+                                dcc.Graph(id='vacc-plot_6',
+                                          style=dict(visibility='hidden'),
+                                          config=dict(responsive=True),
+                                          )
+                            ])
+                    ],
+                    width={"size": 6, "offset": 1}
                 )
             ],
             className="p-4"
@@ -395,7 +417,7 @@ HOSPITALIZATION_GRAPH_TAB = dbc.Tab(
         ),
     ],
     label="Hospitalization Graphs",
-    tab_id="hosp-graph-tab"
+    tab_id="hosp-graph-tab2"
 )
 
 RIGHT_COLUMN_ROW_2 = dbc.Card(
@@ -407,7 +429,7 @@ RIGHT_COLUMN_ROW_2 = dbc.Card(
                         COMPARE_GRAPHS_TAB,
                         DECEASES_GRAPH_TAB,
                         VACCINATION_GRAPH_TAB,
-                        HOSPITALIZATION_GRAPH_TAB
+                        HOSPITALIZATION_GRAPH_TAB,
                     ],
                     id='graph-tabs',
                     card=True,
