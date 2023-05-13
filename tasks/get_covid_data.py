@@ -65,12 +65,12 @@ def check_path():
             files = os.listdir('.')
 
     if pwd == '/home/ecefbpi' and 'app.py' not in files:
-        TMPDIR = '/home/ecefbpi/mysite/tmp/'
+        TMPDIR = '/home/ecefbpi/mysite/tmp1/'
         DATADIR = '/home/ecefbpi/mysite/data/'
         return True, TMPDIR, DATADIR
     elif 'app.py' in files and 'layout.py' in files:
-        if 'data' in files and 'tmp' in files:
-            TMPDIR = pwd + '/tmp/'
+        if 'data' in files and 'tmp1' in files:
+            TMPDIR = pwd + '/tmp1/'
             DATADIR = pwd + '/data/'
             return True, TMPDIR, DATADIR
         else:
